@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.9-slim'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
     
     environment {
         DOCKERHUB_CREDENTIALS = credentials('636b92be-3bee-4bf0-a5bb-6596ca718256')
@@ -16,15 +11,16 @@ pipeline {
         stage('Setup') {
             steps {
                 sh '''
-                    apt-get update && apt-get install -y docker.io
-                    pip install -r requirements.txt
+                    apt-get update
+                    apt-get install -y python3 python3-pip
+                    python3 -m pip install -r requirements.txt
                 '''
             }
         }
         
         stage('Run Unit Tests') {
             steps {
-                sh 'python -m pytest test_app.py -v'
+                sh 'python3 -m pytest test_app.py -v'
             }
         }
         
