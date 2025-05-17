@@ -2,7 +2,6 @@ pipeline {
     agent any
     
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('636b92be-3bee-4bf0-a5bb-6596ca718256')
         DOCKER_IMAGE = 'dombshreyash/flask-app'
         DOCKER_TAG = "${BUILD_NUMBER}"
     }
@@ -10,51 +9,39 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git 'https://github.com/shreyashdomb/flaskapp.git'
             }
         }
         
-        stage('Run Unit Tests') {
-            agent {
-                dockerContainer {
-                    image 'python:3.9-slim'
+        stage('Test') {
+            steps {
+                sh '''
+                    python3 -m pip install --user -r requirements.txt
+                    python3 -m pytest test_app.py -v
+                '''
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+            }
+        }
+        
+        stage('Push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh '''
+                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                        docker push ${DOCKER_IMAGE}:latest
+                    '''
                 }
             }
-            steps {
-                sh '''
-                    pip install -r requirements.txt
-                    python -m pytest test_app.py -v
-                '''
-            }
         }
         
-        stage('Build Docker Image') {
-            agent any
-            steps {
-                sh 'docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .'
-            }
-        }
-        
-        stage('Login to DockerHub') {
-            agent any
-            steps {
-                sh 'echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin'
-            }
-        }
-        
-        stage('Push to DockerHub') {
-            agent any
-            steps {
-                sh '''
-                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
-                    docker push ${DOCKER_IMAGE}:latest
-                '''
-            }
-        }
-        
-        stage('Deploy to Minikube') {
-            agent any
+        stage('Deploy') {
             steps {
                 sh '''
                     kubectl apply -f k8s/deployment.yaml
