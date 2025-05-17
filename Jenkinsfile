@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.9-slim'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
     
     environment {
         DOCKERHUB_CREDENTIALS = credentials('636b92be-3bee-4bf0-a5bb-6596ca718256')
@@ -8,6 +13,15 @@ pipeline {
     }
     
     stages {
+        stage('Setup') {
+            steps {
+                sh '''
+                    apt-get update && apt-get install -y docker.io
+                    pip install -r requirements.txt
+                '''
+            }
+        }
+        
         stage('Run Unit Tests') {
             steps {
                 sh 'python -m pytest test_app.py -v'
@@ -37,6 +51,7 @@ pipeline {
         stage('Deploy to Minikube') {
             steps {
                 sh '''
+                    apt-get install -y kubectl
                     kubectl apply -f k8s/deployment.yaml
                     kubectl apply -f k8s/service.yaml
                     kubectl set image deployment/flask-app flask-app=${DOCKER_IMAGE}:${DOCKER_TAG}
