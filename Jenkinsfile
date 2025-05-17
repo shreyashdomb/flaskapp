@@ -8,9 +8,15 @@ pipeline {
     }
     
     stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
         stage('Run Unit Tests') {
             agent {
-                docker {
+                dockerContainer {
                     image 'python:3.9-slim'
                 }
             }
