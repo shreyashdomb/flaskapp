@@ -2,8 +2,8 @@ pipeline {
     agent any
     
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_IMAGE = 'your-dockerhub-username/flask-app'
+        DOCKERHUB_CREDENTIALS = credentials('636b92be-3bee-4bf0-a5bb-6596ca718256')
+        DOCKER_IMAGE = 'dombshreyash/flask-app'
         DOCKER_TAG = "${BUILD_NUMBER}"
     }
     
